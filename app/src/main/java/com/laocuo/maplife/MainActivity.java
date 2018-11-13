@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -21,6 +22,7 @@ import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
+import com.mapbox.mapboxsdk.plugins.building.BuildingPlugin;
 
 import java.util.List;
 
@@ -30,18 +32,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private MapView mapView;
     private MapboxMap mapboxMap;
+    private BuildingPlugin buildingPlugin;
 
     private LocationManager mLocationManager;
     private LocationListener mLocationListener;
+
+    private final String MAP_KEY = "pk.eyJ1IjoibGFvY3VvIiwiYSI6ImNqa3RnZzV0dzA1MjAzdmxrbXM1eDhma2cifQ.woU4FxsUqUVOQAmsQWhS5w";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mContext = this;
-        Mapbox.getInstance(this, "pk.eyJ1IjoibGFvY3VvIiwiYSI6ImNqa3RnZzV0dzA1MjAzdmxrbXM1eDhma2cifQ.woU4FxsUqUVOQAmsQWhS5w");
+        Mapbox.getInstance(this, MAP_KEY);
         setContentView(R.layout.activity_main);
         mapView = (MapView) findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
+        Log.d(TAG, "getMapAsync");
         mapView.getMapAsync(this);
 
         mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
@@ -150,10 +156,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onMapReady(MapboxMap mapboxMap) {
+        Log.d(TAG, "onMapReady");
         MainActivity.this.mapboxMap = mapboxMap;
+        buildingPlugin = new BuildingPlugin(mapView, mapboxMap);
+        buildingPlugin.setVisibility(true);
         if (false == PermissionsManager.areLocationPermissionsGranted(this)) {
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+            }
         } else {
             setCurrentPosition();
         }
