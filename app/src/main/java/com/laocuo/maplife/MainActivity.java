@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -28,7 +29,14 @@ import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.mapboxsdk.plugins.building.BuildingPlugin;
+import com.mapbox.mapboxsdk.style.layers.LineLayer;
+import com.mapbox.mapboxsdk.style.layers.PropertyFactory;
+import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
@@ -64,7 +72,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private final String MAP_KEY = "pk.eyJ1IjoibGFvY3VvIiwiYSI6ImNqa3RnZzV0dzA1MjAzdmxrbXM1eDhma2cifQ.woU4FxsUqUVOQAmsQWhS5w";
 
-    private LatLng latlng = new LatLng(31.937829219, 118.879628606);
+    private LatLng latlng = new LatLng(31.20027131, 121.66745533);
 
     private double bearing = 0;
 
@@ -175,16 +183,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @SuppressLint("MissingPermission")
     private void setCurrentPosition() {
-//        provider = judgeProvider();
-//        Log.d(TAG, "provider = " + provider);
-//        if (provider == null) {
-//            return;
-//        }
-//        Location l = mLocationManager.getLastKnownLocation(provider);
-//        if (l != null) {
-//            Log.d(TAG, "getLastKnownLocation");
-//            mapboxMap.animateCamera(CameraUpdateFactory.newLatLng(new LatLng(l)), 4000);
-//        }
         isPermissionOk = true;
         listen(true);
     }
@@ -296,5 +294,34 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         } else {
             setCurrentPosition();
         }
+        addField();
+    }
+
+    private void addField() {
+        try {
+            GeoJsonSource geoJsonSource = new GeoJsonSource("geojson-source", loadJsonFromAsset("yihui_fieldmodel.geojson"));
+            mapboxMap.addSource(geoJsonSource);
+            //添加图层
+            LineLayer lineLayer = new LineLayer("linelayer", "geojson-source");
+            lineLayer.setProperties(
+                    PropertyFactory.lineWidth(1f),
+                    PropertyFactory.lineColor(Color.parseColor("#ffda6600"))
+            );
+            mapboxMap.addLayer(lineLayer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 加载GeoJSON数据源
+     */
+    private String loadJsonFromAsset(String nameOfLocalFile) throws IOException {
+        InputStream is = getResources().getAssets().open(nameOfLocalFile);
+        int size = is.available();
+        byte[] buffer = new byte[size];
+        is.read(buffer);
+        is.close();
+        return new String(buffer, "UTF-8");
     }
 }
