@@ -35,8 +35,6 @@ import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
@@ -72,7 +70,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private final String MAP_KEY = "pk.eyJ1IjoibGFvY3VvIiwiYSI6ImNqa3RnZzV0dzA1MjAzdmxrbXM1eDhma2cifQ.woU4FxsUqUVOQAmsQWhS5w";
 
-    private LatLng latlng = new LatLng(31.20027131, 121.66745533);
+    private LatLng latlng = new LatLng(31.937829219, 118.879628606);
 
     private double bearing = 0;
 
@@ -299,13 +297,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void addField() {
         try {
-            GeoJsonSource geoJsonSource = new GeoJsonSource("geojson-source", loadJsonFromAsset("yihui_fieldmodel.geojson"));
+            GeoJsonSource geoJsonSource = new GeoJsonSource("geojson-source", loadJsonFromAsset("jinpeng_field.geojson"));
             mapboxMap.addSource(geoJsonSource);
             //添加图层
             LineLayer lineLayer = new LineLayer("linelayer", "geojson-source");
             lineLayer.setProperties(
                     PropertyFactory.lineWidth(1f),
-                    PropertyFactory.lineColor(Color.parseColor("#ffda6600"))
+                    PropertyFactory.lineColor(Color.WHITE)
             );
             mapboxMap.addLayer(lineLayer);
         } catch (IOException e) {
