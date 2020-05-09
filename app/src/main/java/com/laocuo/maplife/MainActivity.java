@@ -12,8 +12,10 @@ import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Build;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -21,6 +23,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.mapbox.android.core.permissions.PermissionsManager;
+import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
@@ -28,13 +31,17 @@ import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
+import com.mapbox.mapboxsdk.maps.Style;
 import com.mapbox.mapboxsdk.style.layers.LineLayer;
+import com.mapbox.mapboxsdk.style.layers.Property;
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.ref.WeakReference;
 import java.util.List;
+import java.util.Scanner;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
     private final String TAG = "maplife";
@@ -159,7 +166,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void changeCamera() {
-        changeCamera(latlng, zoom, bearing, tilt, 2000);
+//        changeCamera(latlng, zoom, bearing, tilt, 2000);
     }
 
     /**
@@ -288,23 +295,29 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         } else {
             setCurrentPosition();
         }
-        addField();
+
+        mapboxMap.setStyle(Style.MAPBOX_STREETS, new Style.OnStyleLoaded() {
+            @Override
+            public void onStyleLoaded(@NonNull Style style) {
+                new LoadGeoJson(MainActivity.this).execute();
+            }
+        });
     }
 
     private void addField() {
-        try {
-            GeoJsonSource geoJsonSource = new GeoJsonSource("geojson-source", loadJsonFromAsset("jinpeng_field.geojson"));
-            mapboxMap.addSource(geoJsonSource);
-            //添加图层
-            LineLayer lineLayer = new LineLayer("linelayer", "geojson-source");
-            lineLayer.setProperties(
-                    PropertyFactory.lineWidth(1f),
-                    PropertyFactory.lineColor(Color.WHITE)
-            );
-            mapboxMap.addLayer(lineLayer);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            GeoJsonSource geoJsonSource = new GeoJsonSource("geojson-source", loadJsonFromAsset("jinpeng_field.geojson"));
+//            mapboxMap.addSource(geoJsonSource);
+//            //添加图层
+//            LineLayer lineLayer = new LineLayer("linelayer", "geojson-source");
+//            lineLayer.setProperties(
+//                    PropertyFactory.lineWidth(1f),
+//                    PropertyFactory.lineColor(Color.WHITE)
+//            );
+//            mapboxMap.addLayer(lineLayer);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
     /**
@@ -317,5 +330,63 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         is.read(buffer);
         is.close();
         return new String(buffer, "UTF-8");
+    }
+
+    private void drawLines(@NonNull FeatureCollection featureCollection) {
+        if (mapboxMap != null) {
+            mapboxMap.getStyle(style -> {
+                if (featureCollection.features() != null) {
+                    if (featureCollection.features().size() > 0) {
+                        style.addSource(new GeoJsonSource("line-source", featureCollection));
+
+// The layer properties for our line. This is where we make the line dotted, set the
+// color, etc.
+                        style.addLayer(new LineLayer("linelayer", "line-source")
+                                .withProperties(PropertyFactory.lineCap(Property.LINE_CAP_SQUARE),
+                                        PropertyFactory.lineJoin(Property.LINE_JOIN_MITER),
+                                        PropertyFactory.lineOpacity(0.9f),
+                                        PropertyFactory.lineWidth(1f),
+                                        PropertyFactory.lineColor(Color.parseColor("#3bb2d0"))));
+                    }
+                }
+            });
+        }
+    }
+
+    private static class LoadGeoJson extends AsyncTask<Void, Void, FeatureCollection> {
+
+        private WeakReference<MainActivity> weakReference;
+
+        LoadGeoJson(MainActivity activity) {
+            this.weakReference = new WeakReference<>(activity);
+        }
+
+        @Override
+        protected FeatureCollection doInBackground(Void... voids) {
+            try {
+                MainActivity activity = weakReference.get();
+                if (activity != null) {
+                    InputStream inputStream = activity.getAssets().open("jinpeng_field.geojson");
+                    return FeatureCollection.fromJson(convertStreamToString(inputStream));
+                }
+            } catch (Exception exception) {
+//                Timber.e("Exception Loading GeoJSON: %s" , exception.toString());
+            }
+            return null;
+        }
+
+        static String convertStreamToString(InputStream is) {
+            Scanner scanner = new Scanner(is).useDelimiter("\\A");
+            return scanner.hasNext() ? scanner.next() : "";
+        }
+
+        @Override
+        protected void onPostExecute(@Nullable FeatureCollection featureCollection) {
+            super.onPostExecute(featureCollection);
+            MainActivity activity = weakReference.get();
+            if (activity != null && featureCollection != null) {
+                activity.drawLines(featureCollection);
+            }
+        }
     }
 }
